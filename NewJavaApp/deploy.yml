@@ -1,0 +1,43 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    release: "{{ release | default('newjavaapp') }}"
+    chart_dir: "{{ chart_dir | default('NewJavaApp') }}"
+    target_ns: "{{ target_ns | default('newjavaapp') }}"
+    image_tag: "{{ image_tag | default('master-4c6208') }}"
+  tasks:
+    - name: Ensure namespace exists
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: "{{ target_ns }}"
+        state: present
+
+    - name: Render chart into Kubernetes manifests
+      command: "helm template {{ release }} {{ chart_dir }} --namespace {{ target_ns }} --set image.tag={{ image_tag }}"
+      register: rendered
+      changed_when: false
+
+    - name: Apply rendered manifests
+      kubernetes.core.k8s:
+        namespace: "{{ target_ns }}"
+        definition: "{{ item }}"
+        state: present
+        apply: true
+      loop: "{{ rendered.stdout | from_yaml_all | select | list }}"
+      loop_control:
+        label: "{{ item.kind }}/{{ item.metadata.name }}"
+
+    - name: Wait for rollout to become Available (zero-downtime gate)
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: "{{ target_ns }}"
+        label_selectors:
+          - "app.kubernetes.io/instance={{ release }}"
+        wait: true
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 300

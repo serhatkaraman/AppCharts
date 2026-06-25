@@ -1,7 +1,7 @@
 replicaCount: 1
 image:
   repository: serhatkaraman/javaapp
-  tag: master-889535
+  tag: master-280f75
   pullPolicy: IfNotPresent
 imagePullSecrets:
   - name: docker-secret

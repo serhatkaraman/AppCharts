@@ -3,10 +3,10 @@
   connection: local
   gather_facts: false
   vars:
-    release: "{{ release | default('newjavaapp') }}"
-    chart_dir: "{{ chart_dir | default('NewJavaApp') }}"
-    target_ns: "{{ target_ns | default('newjavaapp') }}"
-    image_tag: "{{ image_tag | default('master-4c6208') }}"
+    release: "{{ release | default('newjavaapp', true) }}"
+    chart_dir: "{{ chart_dir | default('NewJavaApp', true) }}"
+    target_ns: "{{ target_ns | default('newjavaapp', true) }}"
+    image_tag: "{{ image_tag | default('master-4c6208', true) }}"
   tasks:
     - name: Ensure namespace exists
       kubernetes.core.k8s:

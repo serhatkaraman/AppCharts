@@ -1,4 +1,18 @@
 replicaCount: 1
+
+# App Y: pausable / preemptible
+priorityClassName: app-preemptible
+
+# Active-pausing controller: pauses Y (this app) when X (NewJavaApp) scales up
+pauser:
+  enabled: true
+  image: alpine/k8s:1.31.1
+  intervalSeconds: 20
+  criticalNamespace: newjavaapp
+  criticalHpa: newjavaapp
+  pausableDeployment: dreamgames-case-dev-javaapp
+  resumeReplicas: 1
+
 image:
   repository: serhatkaraman/javaapp
   tag: master-280f75
@@ -33,7 +47,7 @@ resources:
     cpu: 500m
     memory: 512Mi
 hpa:
-  enabled: true
+  enabled: false
   minReplicas: 1
   maxReplicas: 5
   targetCPUUtilizationPercentage: 70

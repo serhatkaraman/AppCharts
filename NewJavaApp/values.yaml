@@ -1,4 +1,8 @@
 replicaCount: 4
+
+# App X: critical / high-priority (preempts App Y when scaling under load)
+priorityClassName: app-critical
+
 image:
   repository: serhatkaraman/javaapp
   tag: master-4c6208
@@ -33,9 +37,9 @@ resources:
     cpu: 500m
     memory: 512Mi
 hpa:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 5
+  enabled: true
+  minReplicas: 4
+  maxReplicas: 8
   targetCPUUtilizationPercentage: 70
 livenessProbe:
   enabled: true

@@ -1,0 +1,115 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: app-critical
+value: 1000000
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "Critical real-time apps (App X). Preempts lower-priority pods to scale under load."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: app-preemptible
+value: -10
+preemptionPolicy: Never
+globalDefault: false
+description: "Pausable batch apps (App Y). First to be preempted; never preempts others."
+{{- if .Values.pauser.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: javaapp-pauser
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: javaapp-pauser
+rules:
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "deployments/scale"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: javaapp-pauser
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: javaapp-pauser
+subjects:
+  - kind: ServiceAccount
+    name: javaapp-pauser
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: javaapp-pauser
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: javaapp-pauser
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: javaapp-pauser
+  template:
+    metadata:
+      labels:
+        app: javaapp-pauser
+    spec:
+      serviceAccountName: javaapp-pauser
+      containers:
+        - name: pauser
+          image: {{ .Values.pauser.image }}
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          env:
+            - name: INTERVAL
+              value: "{{ .Values.pauser.intervalSeconds }}"
+            - name: CRIT_NS
+              value: "{{ .Values.pauser.criticalNamespace }}"
+            - name: CRIT_HPA
+              value: "{{ .Values.pauser.criticalHpa }}"
+            - name: PAUSE_NS
+              value: "{{ .Release.Namespace }}"
+            - name: PAUSE_DEPLOY
+              value: "{{ .Values.pauser.pausableDeployment }}"
+            - name: RESUME_REPLICAS
+              value: "{{ .Values.pauser.resumeReplicas }}"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -u
+              echo "javaapp-pauser: watch hpa/$CRIT_HPA in $CRIT_NS, pause deploy/$PAUSE_DEPLOY in $PAUSE_NS"
+              while true; do
+                DES=$(kubectl get hpa "$CRIT_HPA" -n "$CRIT_NS" -o jsonpath='{.status.desiredReplicas}' 2>/dev/null || echo "")
+                MIN=$(kubectl get hpa "$CRIT_HPA" -n "$CRIT_NS" -o jsonpath='{.spec.minReplicas}' 2>/dev/null || echo "")
+                CUR=$(kubectl get deploy "$PAUSE_DEPLOY" -n "$PAUSE_NS" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "")
+                if [ -n "$DES" ] && [ -n "$MIN" ] && [ "$DES" -gt "$MIN" ]; then
+                  if [ "$CUR" != "0" ]; then
+                    echo "X scaling up (desired=$DES > min=$MIN) -> pause Y -> 0"
+                    kubectl scale deploy "$PAUSE_DEPLOY" -n "$PAUSE_NS" --replicas=0 || true
+                  fi
+                else
+                  if [ "$CUR" = "0" ]; then
+                    echo "X at baseline (desired=$DES min=$MIN) -> resume Y -> $RESUME_REPLICAS"
+                    kubectl scale deploy "$PAUSE_DEPLOY" -n "$PAUSE_NS" --replicas="$RESUME_REPLICAS" || true
+                  fi
+                fi
+                sleep "$INTERVAL"
+              done
+{{- end }}

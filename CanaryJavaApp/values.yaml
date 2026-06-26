@@ -2,7 +2,7 @@ replicaCount: 4
 
 image:
   repository: serhatkaraman/javaapp
-  tag: master-4c6208
+  tag: init
   pullPolicy: IfNotPresent
 
 imagePullSecrets:

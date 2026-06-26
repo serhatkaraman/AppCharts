@@ -16,7 +16,6 @@ ingress:
   className: nginx
   tlsSecret: canary-java-tls
 
-# Canary steps: 20 -> 50 -> 100, manual pause gates (promote ile ilerlet)
 canary:
   steps:
     - setWeight: 25

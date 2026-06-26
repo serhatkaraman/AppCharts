@@ -16,7 +16,7 @@
         state: present
 
     - name: Render chart into Kubernetes manifests
-      command: "helm template {{ release }} {{ chart_dir }} --namespace {{ target_ns }} --set image.tag={{ image_tag }}"
+      command: "helm template {{ release }} {{ playbook_dir }} --namespace {{ target_ns }} --set image.tag={{ image_tag }}"
       register: rendered
       changed_when: false
 

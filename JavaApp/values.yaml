@@ -1,8 +1,6 @@
 replicaCount: 1
-
 # App Y: pausable / preemptible
 priorityClassName: app-preemptible
-
 # Active-pausing controller: pauses Y (this app) when X (NewJavaApp) scales up
 pauser:
   enabled: true
@@ -12,7 +10,6 @@ pauser:
   criticalHpa: newjavaapp
   pausableDeployment: dreamgames-case-dev-javaapp
   resumeReplicas: 1
-
 image:
   repository: serhatkaraman/javaapp
   tag: master-280f75

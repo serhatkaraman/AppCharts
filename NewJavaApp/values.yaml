@@ -54,15 +54,15 @@ logging:
         cpu: 50m
         memory: 64Mi
       limits:
-        cpu: 200m
-        memory: 128Mi
+        cpu: 50m
+        memory: 64Mi
 resources:
   requests:
     cpu: 100m
     memory: 100Mi
   limits:
-    cpu: 500m
-    memory: 512Mi
+    cpu: 100m
+    memory: 100Mi
 hpa:
   enabled: true
   minReplicas: 4

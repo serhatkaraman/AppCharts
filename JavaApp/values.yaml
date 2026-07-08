@@ -36,6 +36,21 @@ ingress:
         - java.myturkishdish.com
 env: []
 envFrom: []
+logging:
+  enabled: true
+  path: /var/log/app
+  level: INFO
+  maxFileSize: 1GB
+  maxHistory: 7
+  totalSizeCap: 10GB
+  queueSize: 8192
+  neverBlock: true
+  pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
+  console:
+    enabled: false
+  tmpfs:
+    enabled: true
+    sizeLimit: 1Gi
 resources:
   requests:
     cpu: 100m

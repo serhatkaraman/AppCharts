@@ -19,6 +19,9 @@ spec:
   template:
     metadata:
       annotations:
+        {{- if .Values.logging.enabled }}
+        checksum/logback: {{ include (print $.Template.BasePath "/logging-configmap.yaml") . | sha256sum }}
+        {{- end }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -43,9 +46,15 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
-          {{- with .Values.env }}
+          {{- if or .Values.env .Values.logging.enabled }}
           env:
+            {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.logging.enabled }}
+            - name: LOGGING_CONFIG
+              value: /config/logback.xml
+            {{- end }}
           {{- end }}
           {{- with .Values.envFrom }}
           envFrom:
@@ -69,6 +78,26 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.logging.enabled }}
+          volumeMounts:
+            - name: logback-config
+              mountPath: /config
+              readOnly: true
+            - name: app-logs
+              mountPath: {{ .Values.logging.path }}
+          {{- end }}
+      {{- if .Values.logging.enabled }}
+      volumes:
+        - name: logback-config
+          configMap:
+            name: {{ include "server.fullname" . }}-logback
+        - name: app-logs
+          emptyDir:
+            {{- if .Values.logging.tmpfs.enabled }}
+            medium: Memory
+            sizeLimit: {{ .Values.logging.tmpfs.sizeLimit }}
+            {{- end }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

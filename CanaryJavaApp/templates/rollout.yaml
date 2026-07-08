@@ -12,6 +12,10 @@ spec:
       {{- include "canaryjavaapp.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      {{- if .Values.logging.enabled }}
+      annotations:
+        checksum/logback: {{ include (print $.Template.BasePath "/logging-configmap.yaml") . | sha256sum }}
+      {{- end }}
       labels:
         {{- include "canaryjavaapp.selectorLabels" . | nindent 8 }}
     spec:
@@ -26,6 +30,11 @@ spec:
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
+          {{- if .Values.logging.enabled }}
+          env:
+            - name: LOGGING_CONFIG
+              value: /config/logback.xml
+          {{- end }}
           readinessProbe:
             tcpSocket:
               port: {{ .Values.service.port }}
@@ -38,6 +47,26 @@ spec:
             periodSeconds: 20
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.logging.enabled }}
+          volumeMounts:
+            - name: logback-config
+              mountPath: /config
+              readOnly: true
+            - name: app-logs
+              mountPath: {{ .Values.logging.path }}
+          {{- end }}
+      {{- if .Values.logging.enabled }}
+      volumes:
+        - name: logback-config
+          configMap:
+            name: {{ include "canaryjavaapp.fullname" . }}-logback
+        - name: app-logs
+          emptyDir:
+            {{- if .Values.logging.tmpfs.enabled }}
+            medium: Memory
+            sizeLimit: {{ .Values.logging.tmpfs.sizeLimit }}
+            {{- end }}
+      {{- end }}
   strategy:
     canary:
       stableService: {{ include "canaryjavaapp.fullname" . }}

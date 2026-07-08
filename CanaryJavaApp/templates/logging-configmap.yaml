@@ -1,0 +1,46 @@
+{{- if .Values.logging.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "canaryjavaapp.fullname" . }}-logback
+  labels:
+    {{- include "canaryjavaapp.labels" . | nindent 4 }}
+data:
+  logback.xml: |
+    <configuration>
+      <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>{{ .Values.logging.path }}/app.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+          <fileNamePattern>{{ .Values.logging.path }}/app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+          <maxFileSize>{{ .Values.logging.maxFileSize }}</maxFileSize>
+          <maxHistory>{{ .Values.logging.maxHistory }}</maxHistory>
+          <totalSizeCap>{{ .Values.logging.totalSizeCap }}</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+          <pattern>{{ .Values.logging.pattern }}</pattern>
+        </encoder>
+      </appender>
+
+      <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="FILE"/>
+        <queueSize>{{ .Values.logging.queueSize }}</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>{{ .Values.logging.neverBlock }}</neverBlock>
+      </appender>
+      {{- if .Values.logging.console.enabled }}
+
+      <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+          <pattern>{{ .Values.logging.pattern }}</pattern>
+        </encoder>
+      </appender>
+      {{- end }}
+
+      <root level="{{ .Values.logging.level }}">
+        <appender-ref ref="ASYNC_FILE"/>
+        {{- if .Values.logging.console.enabled }}
+        <appender-ref ref="CONSOLE"/>
+        {{- end }}
+      </root>
+    </configuration>
+{{- end }}

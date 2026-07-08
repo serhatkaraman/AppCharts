@@ -51,6 +51,18 @@ logging:
   tmpfs:
     enabled: true
     sizeLimit: 1Gi
+  sidecar:
+    enabled: true
+    image: fluent/fluent-bit:3.2.4
+    forwardHost: dreamgames-case-fluent-bit-aggregator.elasticsearch.svc.cluster.local
+    forwardPort: 24224
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
 resources:
   requests:
     cpu: 100m

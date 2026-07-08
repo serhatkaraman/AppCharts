@@ -1,0 +1,36 @@
+{{- if and .Values.logging.enabled .Values.logging.sidecar.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "canaryjavaapp.fullname" . }}-flb-sidecar
+  labels:
+    {{- include "canaryjavaapp.labels" . | nindent 4 }}
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush 5
+        Daemon Off
+        Log_Level info
+        storage.type filesystem
+        storage.path /var/flb-storage/
+        storage.sync normal
+        storage.checksum off
+        storage.backlog.mem_limit 64M
+
+    [INPUT]
+        Name tail
+        Path {{ .Values.logging.path }}/app.log
+        Tag app.{{ include "canaryjavaapp.fullname" . }}
+        DB /var/flb-storage/tail.db
+        Mem_Buf_Limit 100MB
+        storage.type filesystem
+        Skip_Long_Lines On
+
+    [OUTPUT]
+        Name forward
+        Match app.*
+        Host {{ .Values.logging.sidecar.forwardHost }}
+        Port {{ .Values.logging.sidecar.forwardPort }}
+        storage.total_limit_size 5G
+        Retry_Limit False
+{{- end }}
